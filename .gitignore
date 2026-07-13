@@ -216,3 +216,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.log
+*.pdf
+reports/pdf/*
+logs/*
+config/api_keys.json
+.DS_Store
