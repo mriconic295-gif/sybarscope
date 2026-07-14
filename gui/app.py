@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from gui.dashboard import Dashboard
+from gui.deshboard import Dashboard
 
 class App(ctk.CTk):
     def __init__(self, config):
