@@ -2,8 +2,7 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gui import App
-import themes
-from themes import get_theme, Theme
+from config.themes import get_theme   # અથવા જે ફંક્શન/ક્લાસ હોય તે
 from utils.logger import setup_logger
 from config.settings import load_config
 
