@@ -14,6 +14,7 @@ from modules.performance import measure_response_time, get_page_size
 from modules.robots import get_robots
 from modules.sitemap import detect_sitemap
 from modules.screenshot import take_screenshot
+from modules.advanced_recon import AdvancedRecon  # 🎯 નવું મોડ્યુલ ઈમ્પોર્ટ કર્યું
 from ai.ai_summary import get_ai_summary
 from utils.helper import extract_domain
 from utils.export import export_json, export_csv, export_pdf
@@ -39,7 +40,6 @@ class Dashboard(ctk.CTkFrame):
         self.url_label = ctk.CTkLabel(header_card, text="🌐 Target URL:", font=("Helvetica", 13, "bold"))
         self.url_label.grid(row=0, column=0, padx=(15, 5), pady=12)
 
-        # Fix placeholder issue
         self.url_entry = ctk.CTkEntry(
             header_card, 
             placeholder_text="https://example.com", 
@@ -99,7 +99,6 @@ class Dashboard(ctk.CTkFrame):
         result_card.grid_columnconfigure(0, weight=1)
         result_card.grid_rowconfigure(0, weight=1)
 
-        # Result Text area - Enabled for selecting and copying
         self.result_text = ctk.CTkTextbox(
             result_card, 
             wrap="word", 
@@ -110,14 +109,11 @@ class Dashboard(ctk.CTkFrame):
         self.result_text.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
     def copy_text_to_clipboard(self):
-        """નવું ફીચર: આખા ટેક્સ્ટ બોક્સના લખાણને ક્લિપબોર્ડમાં કોપી કરશે"""
         content = self.result_text.get("0.0", "end").strip()
         if content:
             self.clipboard_clear()
             self.clipboard_append(content)
             self.update()
-            
-            # વિઝ્યુઅલ ફીડબેક માટે બટનનું નામ થોડીવાર બદલાશે
             self.copy_btn.configure(text="✅ Copied!")
             self.after(2000, lambda: self.copy_btn.configure(text="📋 Copy Text"))
 
@@ -138,9 +134,8 @@ class Dashboard(ctk.CTkFrame):
         self.export_btn.configure(state="disabled")
         self.progress.set(0)
         self.result_text.delete("0.0", "end")
-        self.result_text.insert("0.0", "🚀 Starting Analysis...\n")
+        self.result_text.insert("0.0", "🚀 Starting Advanced Recon Analysis...\n")
 
-        # Run in thread to keep GUI responsive
         thread = threading.Thread(target=self._run_analysis, args=(url,))
         thread.daemon = True
         thread.start()
@@ -163,12 +158,23 @@ class Dashboard(ctk.CTkFrame):
                 ip = dns_results["A"][0]
                 self.results["IP"] = ip
 
-            # Step 2: WHOIS
+            # 🎯 Step 2: Advanced OSINT Recon (Subdomains, Real IP, Ports)
+            self.update_status("Advanced OSINT Recon (Subdomains & Real IP Finder)")
+            try:
+                recon = AdvancedRecon(domain)
+                recon_data = recon.run_all(current_ip=ip)
+                self.results["Subdomains"] = recon_data.get("Subdomains Found", [])
+                self.results["Potential Real Origin IP"] = recon_data.get("Potential Real Origin IPs", [])
+                self.results["Open Ports"] = recon_data.get("Open Services & Ports", [])
+            except Exception as e:
+                self.results["Advanced Recon"] = f"Error: {str(e)}"
+
+            # Step 3: WHOIS
             self.update_status("WHOIS Lookup")
             whois_data = lookup_whois(domain)
             self.results["WHOIS"] = whois_data
 
-            # Step 3: IP based lookups
+            # Step 4: IP based lookups
             if ip:
                 self.update_status("IP Lookup / ASN / GeoIP")
                 ip_info = IPLookup(ip).get_info()
@@ -178,14 +184,14 @@ class Dashboard(ctk.CTkFrame):
                 geo_data = GeoIP(ip).get_location()
                 self.results["GeoIP"] = geo_data
 
-            # Step 4: SSL Certificate
+            # Step 5: SSL Certificate
             self.update_status("SSL Certificate")
             ssl = SSLCertificate(domain)
             ssl_data = ssl.get_cert_info()
             self.results["SSL"] = ssl_data
             self.results["https_enabled"] = "valid_from" in ssl_data
 
-            # Step 5: HTTP Headers & Security Headers
+            # Step 6: HTTP Headers & Security Headers
             self.update_status("HTTP Headers")
             headers = get_headers(url)
             self.results["HTTP Headers"] = headers
@@ -196,7 +202,7 @@ class Dashboard(ctk.CTkFrame):
             else:
                 self.results["Security Headers"] = {}
 
-            # Step 6: Technology Detection
+            # Step 7: Technology Detection
             self.update_status("Technologies")
             html = ""
             try:
@@ -207,26 +213,26 @@ class Dashboard(ctk.CTkFrame):
             tech = TechDetector(url, html).detect()
             self.results["Technologies"] = tech
 
-            # Step 7: CDN Detection
+            # Step 8: CDN Detection
             self.update_status("CDN Detection")
             cdn = detect_cdn(url)
             self.results["CDN"] = cdn
 
-            # Step 8: Performance
+            # Step 9: Performance
             self.update_status("Performance")
             response_time = measure_response_time(url)
             page_size = get_page_size(url)
             self.results["Response Time (s)"] = response_time
             self.results["Page Size (bytes)"] = page_size
 
-            # Step 9: robots.txt & sitemap
+            # Step 10: robots.txt & sitemap
             self.update_status("robots.txt & sitemap")
             robots = get_robots(url)
             self.results["robots.txt"] = robots[:500] if isinstance(robots, str) else "Error"
             has_sitemap = detect_sitemap(url)
             self.results["sitemap.xml"] = "Present" if has_sitemap else "Not found"
 
-            # Step 10: Screenshot
+            # Step 11: Screenshot
             self.update_status("Screenshot")
             try:
                 screenshot_path = take_screenshot(url, domain)
@@ -234,7 +240,7 @@ class Dashboard(ctk.CTkFrame):
             except Exception as e:
                 self.results["Screenshot"] = f"Error: {str(e)}"
 
-            # Step 11: AI Summary
+            # Step 12: AI Summary
             self.update_status("AI Analysis")
             ai = get_ai_summary(self.results)
             self.results["AI Summary"] = ai
