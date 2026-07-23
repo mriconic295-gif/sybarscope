@@ -21,7 +21,7 @@ import requests, threading, os, json
 
 class Dashboard(ctk.CTkFrame):
     def __init__(self, parent, config):
-        super().__init__(parent)
+        super().__init__(parent, fg_color="transparent")
         self.parent = parent
         self.config = config
         self.results = {}
@@ -31,51 +31,114 @@ class Dashboard(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
 
-        # Top frame
-        top_frame = ctk.CTkFrame(self)
-        top_frame.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
-        top_frame.grid_columnconfigure(1, weight=1)
+        # 🎯 Header Panel (Top Card)
+        header_card = ctk.CTkFrame(self, corner_radius=12, fg_color=("#F0F2F5", "#1E1E2E"), border_width=1, border_color=("#D1D5DB", "#313244"))
+        header_card.grid(row=0, column=0, padx=15, pady=15, sticky="ew")
+        header_card.grid_columnconfigure(1, weight=1)
 
-        self.url_label = ctk.CTkLabel(top_frame, text="Enter URL:")
-        self.url_label.grid(row=0, column=0, padx=5, pady=5)
+        self.url_label = ctk.CTkLabel(header_card, text="🌐 Target URL:", font=("Helvetica", 13, "bold"))
+        self.url_label.grid(row=0, column=0, padx=(15, 5), pady=12)
 
-        self.url_entry = ctk.CTkEntry(top_frame)
-        self.url_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
-        self.url_entry.insert(0, "https://example.com")
+        # Fix placeholder issue
+        self.url_entry = ctk.CTkEntry(
+            header_card, 
+            placeholder_text="https://example.com", 
+            font=("Consolas", 13),
+            height=38,
+            corner_radius=8
+        )
+        self.url_entry.grid(row=0, column=1, padx=5, pady=12, sticky="ew")
 
-        self.analyze_btn = ctk.CTkButton(top_frame, text="Analyze", command=self.analyze)
-        self.analyze_btn.grid(row=0, column=2, padx=5, pady=5)
+        # Action Buttons
+        self.analyze_btn = ctk.CTkButton(
+            header_card, 
+            text="🔍 Analyze", 
+            font=("Helvetica", 12, "bold"),
+            height=38,
+            corner_radius=8,
+            fg_color="#3B82F6", 
+            hover_color="#2563EB",
+            command=self.analyze
+        )
+        self.analyze_btn.grid(row=0, column=2, padx=5, pady=12)
 
-        self.export_btn = ctk.CTkButton(top_frame, text="Export All", command=self.export_all)
-        self.export_btn.grid(row=0, column=3, padx=5, pady=5)
+        self.export_btn = ctk.CTkButton(
+            header_card, 
+            text="📥 Export All", 
+            font=("Helvetica", 12, "bold"),
+            height=38,
+            corner_radius=8,
+            fg_color="#10B981", 
+            hover_color="#059669",
+            command=self.export_all
+        )
+        self.export_btn.grid(row=0, column=3, padx=5, pady=12)
         self.export_btn.configure(state="disabled")
 
-        self.progress = ctk.CTkProgressBar(self)
-        self.progress.grid(row=0, column=0, padx=10, pady=(0,10), sticky="ew")
+        # Copy Text Button
+        self.copy_btn = ctk.CTkButton(
+            header_card, 
+            text="📋 Copy Text", 
+            font=("Helvetica", 12, "bold"),
+            height=38,
+            corner_radius=8,
+            fg_color="#6B7280", 
+            hover_color="#4B5563",
+            command=self.copy_text_to_clipboard
+        )
+        self.copy_btn.grid(row=0, column=4, padx=(5, 15), pady=12)
+
+        # Progress bar
+        self.progress = ctk.CTkProgressBar(header_card, height=6, corner_radius=3, progress_color="#3B82F6")
+        self.progress.grid(row=1, column=0, columnspan=5, padx=15, pady=(0, 12), sticky="ew")
         self.progress.set(0)
 
-        # Result text area
-        self.result_text = ctk.CTkTextbox(self, wrap="word", font=("Consolas", 12))
-        self.result_text.grid(row=1, column=0, padx=10, pady=5, sticky="nsew")
+        # 📊 Result Card Area
+        result_card = ctk.CTkFrame(self, corner_radius=12, fg_color=("#F0F2F5", "#1E1E2E"), border_width=1, border_color=("#D1D5DB", "#313244"))
+        result_card.grid(row=1, column=0, padx=15, pady=(0, 15), sticky="nsew")
+        result_card.grid_columnconfigure(0, weight=1)
+        result_card.grid_rowconfigure(0, weight=1)
+
+        # Result Text area - Enabled for selecting and copying
+        self.result_text = ctk.CTkTextbox(
+            result_card, 
+            wrap="word", 
+            font=("Consolas", 12),
+            corner_radius=8,
+            border_width=0
+        )
+        self.result_text.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+
+    def copy_text_to_clipboard(self):
+        """નવું ફીચર: આખા ટેક્સ્ટ બોક્સના લખાણને ક્લિપબોર્ડમાં કોપી કરશે"""
+        content = self.result_text.get("0.0", "end").strip()
+        if content:
+            self.clipboard_clear()
+            self.clipboard_append(content)
+            self.update()
+            
+            # વિઝ્યુઅલ ફીડબેક માટે બટનનું નામ થોડીવાર બદલાશે
+            self.copy_btn.configure(text="✅ Copied!")
+            self.after(2000, lambda: self.copy_btn.configure(text="📋 Copy Text"))
 
     def analyze(self):
         url = self.url_entry.get().strip()
         if not url:
-            self.result_text.delete("0.0", "end")
-            self.result_text.insert("0.0", "Please enter a URL.\n")
-            return
+            url = self.url_entry.cget("placeholder_text")
+            
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
+            
         if not validate_url(url):
             self.result_text.delete("0.0", "end")
-            self.result_text.insert("0.0", "Invalid URL format.\n")
+            self.result_text.insert("0.0", "❌ Invalid URL format.\n")
             return
 
         self.analyze_btn.configure(state="disabled")
         self.export_btn.configure(state="disabled")
         self.progress.set(0)
         self.result_text.delete("0.0", "end")
-        self.result_text.insert("0.0", "Analyzing...\n")
+        self.result_text.insert("0.0", "🚀 Starting Analysis...\n")
 
         # Run in thread to keep GUI responsive
         thread = threading.Thread(target=self._run_analysis, args=(url,))
@@ -89,25 +152,25 @@ class Dashboard(ctk.CTkFrame):
             self.results["Domain"] = domain
 
             # Step 1: DNS Lookup
-            self.update_status("DNS Lookup...")
+            self.update_status("DNS Lookup")
             dns = DNSLookup(domain)
             dns_results = dns.all_lookups()
             self.results["DNS"] = dns_results
 
             # Get IP from A record
             ip = None
-            if dns_results["A"] and not dns_results["A"][0].startswith("Error"):
+            if dns_results.get("A") and not dns_results["A"][0].startswith("Error"):
                 ip = dns_results["A"][0]
                 self.results["IP"] = ip
 
             # Step 2: WHOIS
-            self.update_status("WHOIS Lookup...")
+            self.update_status("WHOIS Lookup")
             whois_data = lookup_whois(domain)
             self.results["WHOIS"] = whois_data
 
-            # Step 3: IP based lookups (if IP available)
+            # Step 3: IP based lookups
             if ip:
-                self.update_status("IP Lookup / ASN / GeoIP...")
+                self.update_status("IP Lookup / ASN / GeoIP")
                 ip_info = IPLookup(ip).get_info()
                 self.results["IP Info"] = ip_info
                 asn_data = lookup_asn(ip)
@@ -116,14 +179,14 @@ class Dashboard(ctk.CTkFrame):
                 self.results["GeoIP"] = geo_data
 
             # Step 4: SSL Certificate
-            self.update_status("SSL Certificate...")
+            self.update_status("SSL Certificate")
             ssl = SSLCertificate(domain)
             ssl_data = ssl.get_cert_info()
             self.results["SSL"] = ssl_data
             self.results["https_enabled"] = "valid_from" in ssl_data
 
             # Step 5: HTTP Headers & Security Headers
-            self.update_status("HTTP Headers...")
+            self.update_status("HTTP Headers")
             headers = get_headers(url)
             self.results["HTTP Headers"] = headers
             if "error" not in headers:
@@ -134,7 +197,7 @@ class Dashboard(ctk.CTkFrame):
                 self.results["Security Headers"] = {}
 
             # Step 6: Technology Detection
-            self.update_status("Technologies...")
+            self.update_status("Technologies")
             html = ""
             try:
                 resp = requests.get(url, timeout=10)
@@ -145,26 +208,26 @@ class Dashboard(ctk.CTkFrame):
             self.results["Technologies"] = tech
 
             # Step 7: CDN Detection
-            self.update_status("CDN Detection...")
+            self.update_status("CDN Detection")
             cdn = detect_cdn(url)
             self.results["CDN"] = cdn
 
             # Step 8: Performance
-            self.update_status("Performance...")
+            self.update_status("Performance")
             response_time = measure_response_time(url)
             page_size = get_page_size(url)
             self.results["Response Time (s)"] = response_time
             self.results["Page Size (bytes)"] = page_size
 
             # Step 9: robots.txt & sitemap
-            self.update_status("robots.txt & sitemap...")
+            self.update_status("robots.txt & sitemap")
             robots = get_robots(url)
             self.results["robots.txt"] = robots[:500] if isinstance(robots, str) else "Error"
             has_sitemap = detect_sitemap(url)
             self.results["sitemap.xml"] = "Present" if has_sitemap else "Not found"
 
-            # Step 10: Screenshot (optional)
-            self.update_status("Screenshot...")
+            # Step 10: Screenshot
+            self.update_status("Screenshot")
             try:
                 screenshot_path = take_screenshot(url, domain)
                 self.results["Screenshot"] = screenshot_path
@@ -172,7 +235,7 @@ class Dashboard(ctk.CTkFrame):
                 self.results["Screenshot"] = f"Error: {str(e)}"
 
             # Step 11: AI Summary
-            self.update_status("AI Analysis...")
+            self.update_status("AI Analysis")
             ai = get_ai_summary(self.results)
             self.results["AI Summary"] = ai
 
@@ -184,24 +247,24 @@ class Dashboard(ctk.CTkFrame):
 
         except Exception as e:
             self.result_text.delete("0.0", "end")
-            self.result_text.insert("0.0", f"Error during analysis: {str(e)}")
+            self.result_text.insert("0.0", f"❌ Error during analysis: {str(e)}")
             self.analyze_btn.configure(state="normal")
 
     def update_status(self, msg):
-        self.result_text.insert("end", f"  {msg}...\n")
+        self.result_text.insert("end", f"  ⏳ [Checking] {msg}...\n")
         self.result_text.see("end")
         self.update_idletasks()
 
     def display_results(self):
         self.result_text.delete("0.0", "end")
         for key, value in self.results.items():
-            self.result_text.insert("end", f"\n{'='*20} {key} {'='*20}\n")
+            self.result_text.insert("end", f"\n{'='*22} {key} {'='*22}\n")
             if isinstance(value, dict):
                 for k, v in value.items():
-                    self.result_text.insert("end", f"  {k}: {v}\n")
+                    self.result_text.insert("end", f"  • {k}: {v}\n")
             elif isinstance(value, list):
                 for item in value:
-                    self.result_text.insert("end", f"  {item}\n")
+                    self.result_text.insert("end", f"  • {item}\n")
             else:
                 self.result_text.insert("end", f"  {value}\n")
         self.result_text.see("end")
@@ -213,4 +276,4 @@ class Dashboard(ctk.CTkFrame):
         json_path = export_json(self.results, filename)
         csv_path = export_csv(self.results, filename)
         pdf_path = export_pdf("CyberScope Report", self.results, filename)
-        self.result_text.insert("end", f"\nReports saved:\n  JSON: {json_path}\n  CSV: {csv_path}\n  PDF: {pdf_path}\n")
+        self.result_text.insert("end", f"\n\n📂 Reports Saved Successfully:\n  • JSON: {json_path}\n  • CSV: {csv_path}\n  • PDF: {pdf_path}\n")
