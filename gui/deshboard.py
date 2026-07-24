@@ -1,35 +1,22 @@
 import customtkinter as ctk
-import tkinter as tk
-from tkinter import messagebox
 import logging
 
-# Logger Setup
 logger = logging.getLogger("CyberScope.Dashboard")
 
 class Dashboard(ctk.CTkFrame):
     def __init__(self, parent, config=None, *args, **kwargs):
-        # config ને કસ્ટમ આર્ગ્યુમેન્ટ તરીકે સ્ટોર કરો
         self.config = config or {}
-        
-        # parent અને કસ્ટમ કીવર્ડ આર્ગ્યુમેન્ટ્સ જ super().__init__ માં મોકલો
         super().__init__(parent, *args, **kwargs)
         
-        # Main Layout Setup
         self.pack(fill="both", expand=True, padx=15, pady=15)
-        
-        # State Data
         self.current_scan_data = {}
         
-        # Setup UI
         self.setup_ui()
 
     def setup_ui(self):
-        """
-        Builds a modern, clean, and user-friendly GUI for CyberScope Dashboard
-        """
-        # Configure Grid Weights so UI expands properly
+        # Configure Grid Rows & Columns
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(2, weight=1)
+        self.grid_rowconfigure(3, weight=1) # Results box will scale properly
 
         # ==========================================
         # 1. HEADER SECTION
@@ -45,52 +32,75 @@ class Dashboard(ctk.CTkFrame):
         self.title_label.pack(side="left", anchor="w")
 
         # ==========================================
-        # 2. EXECUTIVE RISK SCORE CARD (Top Widget)
+        # 2. SEARCH / TARGET INPUT BAR (નવું ઉમેરેલું)
         # ==========================================
-        self.card_frame = ctk.CTkFrame(self, corner_radius=12, fg_color="#1e1e2e")
-        self.card_frame.grid(row=1, column=0, sticky="ew", pady=(0, 15), ipady=8)
+        self.search_frame = ctk.CTkFrame(self, corner_radius=10, fg_color="#1e1e2e")
+        self.search_frame.grid(row=1, column=0, sticky="ew", pady=(0, 15), ipady=5)
+        self.search_frame.grid_columnconfigure(0, weight=1)
 
+        self.url_entry = ctk.CTkEntry(
+            self.search_frame, 
+            placeholder_text="Enter Domain or URL (e.g. example.com or https://example.com)...",
+            font=ctk.CTkFont(family="Segoe UI", size=13),
+            height=40,
+            corner_radius=8
+        )
+        self.url_entry.grid(row=0, column=0, padx=(15, 10), pady=10, sticky="ew")
+
+        self.scan_btn = ctk.CTkButton(
+            self.search_frame,
+            text="🚀 Start Scan",
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            height=40,
+            corner_radius=8,
+            fg_color="#3B82F6",
+            hover_color="#1D4ED8",
+            command=self.start_scan_action
+        )
+        self.scan_btn.grid(row=0, column=1, padx=(0, 15), pady=10)
+
+        # ==========================================
+        # 3. EXECUTIVE RISK SCORE CARD
+        # ==========================================
+        self.card_frame = ctk.CTkFrame(self, corner_radius=10, fg_color="#1e1e2e")
+        self.card_frame.grid(row=2, column=0, sticky="ew", pady=(0, 15), ipady=5)
         self.card_frame.grid_columnconfigure(0, weight=1)
 
         self.score_title = ctk.CTkLabel(
             self.card_frame, 
             text="OVERALL RISK SCORE", 
-            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
             text_color="#a6adc8"
         )
-        self.score_title.grid(row=0, column=0, sticky="w", padx=20, pady=(10, 0))
+        self.score_title.grid(row=0, column=0, sticky="w", padx=15, pady=(8, 0))
 
-        # Big Dynamic Score Display
         self.score_display = ctk.CTkLabel(
             self.card_frame, 
             text="-- / 100 (Awaiting Scan)", 
-            font=ctk.CTkFont(family="Segoe UI", size=26, weight="bold"),
+            font=ctk.CTkFont(family="Segoe UI", size=24, weight="bold"),
             text_color="#89b4fa"
         )
-        self.score_display.grid(row=1, column=0, sticky="w", padx=20, pady=(2, 5))
+        self.score_display.grid(row=1, column=0, sticky="w", padx=15, pady=(2, 5))
 
-        # Dynamic Colored Progress Bar
-        self.progress_bar = ctk.CTkProgressBar(self.card_frame, height=10, corner_radius=5)
+        self.progress_bar = ctk.CTkProgressBar(self.card_frame, height=8, corner_radius=4)
         self.progress_bar.set(0)
-        self.progress_bar.grid(row=2, column=0, sticky="ew", padx=20, pady=(0, 10))
+        self.progress_bar.grid(row=2, column=0, sticky="ew", padx=15, pady=(0, 8))
 
         # ==========================================
-        # 3. DETAILED BREAKDOWN & AI INSIGHTS PANEL
+        # 4. DETAILED BREAKDOWN & RESULTS PANEL
         # ==========================================
-        self.details_frame = ctk.CTkFrame(self, corner_radius=12)
-        self.details_frame.grid(row=2, column=0, sticky="nsew")
-
+        self.details_frame = ctk.CTkFrame(self, corner_radius=10)
+        self.details_frame.grid(row=3, column=0, sticky="nsew")
         self.details_frame.grid_columnconfigure(0, weight=1)
         self.details_frame.grid_rowconfigure(1, weight=1)
 
         self.details_title = ctk.CTkLabel(
             self.details_frame, 
             text="🔍 Security Vulnerabilities & Findings", 
-            font=ctk.CTkFont(family="Segoe UI", size=15, weight="bold")
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold")
         )
-        self.details_title.grid(row=0, column=0, sticky="w", padx=15, pady=(12, 8))
+        self.details_title.grid(row=0, column=0, sticky="w", padx=15, pady=(10, 5))
 
-        # Modern Scrollable Text Box for Clear Reading
         self.summary_text = ctk.CTkTextbox(
             self.details_frame, 
             font=ctk.CTkFont(family="Consolas", size=13),
@@ -99,115 +109,77 @@ class Dashboard(ctk.CTkFrame):
             fg_color="#181825",
             text_color="#cdd6f4"
         )
-        self.summary_text.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 12))
+        self.summary_text.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
 
-        # Initial Placeholder Text
-        self.summary_text.insert("1.0", "📌 Welcome to CyberScope Security Dashboard.\n\nRun a domain scan to view threat intelligence, risk scores, and detailed vulnerability breakdowns here.")
+        self.summary_text.insert("1.0", "📌 Enter a URL above and click 'Start Scan' to analyze the target.")
 
-    # ==========================================
-    # 4. LOGIC TO UPDATE DASHBOARD DATA
-    # ==========================================
+    def start_scan_action(self):
+        """ઉપરના સર્ચ બારમાંથી Target લઈને સ્કેન પ્રક્રિયા શરૂ કરવા માટે"""
+        target = self.url_entry.get().strip()
+        if not target:
+            self.summary_text.delete("1.0", "end")
+            self.summary_text.insert("1.0", "⚠️ Error: Please enter a target domain or URL first!")
+            return
+
+        self.summary_text.delete("1.0", "end")
+        self.summary_text.insert("1.0", f"🔄 Scanning target: {target}...\nPlease wait, running modules...")
+        
+        # NOTE: જો તમારી પાસે backend સ્કેનર કૉલ કરવાનું ફંક્શન હોય, તો તેને અહીં કૉલ કરવું.
+
     def update_dashboard(self, scan_results: dict, ai_summary_data: dict = None):
-        """
-        Call this method to update the GUI after scanning a target.
-        Accepts raw scan results and processed AI summary data.
-        """
+        """સ્કેન પૂરું થયા પછી ડેટા દર્શાવવા માટે"""
         self.current_scan_data = scan_results
 
-        # Fallback if ai_summary_data is not directly passed
         if not ai_summary_data:
-            from ai.ai_summary import get_ai_summary
             try:
+                from ai.ai_summary import get_ai_summary
                 ai_summary_data = get_ai_summary(scan_results)
             except Exception as e:
-                logger.error(f"Error calling AI summary: {e}")
+                logger.error(f"Error loading AI summary: {e}")
                 ai_summary_data = {
                     "risk_score": 0,
-                    "summary": "Could not generate AI summary.",
+                    "summary": "AI Assessment unavailable.",
                     "vulnerabilities": [],
-                    "recommendations": ["Ensure scanner engines are running correctly."]
+                    "recommendations": []
                 }
 
-        # Extract values
         score = ai_summary_data.get("risk_score", 0)
-        summary_msg = ai_summary_data.get("summary", "N/A")
+        summary_msg = ai_summary_data.get("summary", "")
         vulnerabilities = ai_summary_data.get("vulnerabilities", [])
         recommendations = ai_summary_data.get("recommendations", [])
 
-        # Set Colors & Status according to Risk Score
         if score <= 20:
-            color = "#a6e3a1"  # Soft Green (Low Risk)
+            color = "#a6e3a1"
             status = "LOW RISK"
         elif score <= 50:
-            color = "#f9e2af"  # Soft Yellow/Orange (Moderate Risk)
+            color = "#f9e2af"
             status = "MODERATE RISK"
         else:
-            color = "#f38ba8"  # Soft Red (High Risk)
+            color = "#f38ba8"
             status = "HIGH / CRITICAL RISK"
 
-        # Update Top Score Display & Progress Bar
         self.score_display.configure(text=f"{score} / 100 — {status}", text_color=color)
         self.progress_bar.configure(progress_color=color)
         self.progress_bar.set(score / 100.0)
 
-        # Clear previous text
         self.summary_text.delete("1.0", "end")
-
-        # --------------------------------------------------
-        # Render Structured & Clean Text Format
-        # --------------------------------------------------
-        # Section 1: Executive Summary
-        self.summary_text.insert("end", "======================================================\n")
-        self.summary_text.insert("end", "📌 EXECUTIVE SUMMARY\n")
-        self.summary_text.insert("end", "======================================================\n")
-        self.summary_text.insert("end", f"{summary_msg}\n\n")
-
-        # Section 2: Vulnerability List
-        self.summary_text.insert("end", "======================================================\n")
-        self.summary_text.insert("end", "⚠️ DETECTED VULNERABILITIES & SECURITY GAPS\n")
-        self.summary_text.insert("end", "======================================================\n")
         
+        self.summary_text.insert("end", f"📌 EXECUTIVE SUMMARY\n{summary_msg}\n\n")
+        
+        self.summary_text.insert("end", "⚠️ DETECTED VULNERABILITIES\n")
         if vulnerabilities:
             for idx, item in enumerate(vulnerabilities, 1):
                 if isinstance(item, dict):
-                    sev = item.get("severity", "INFO")
-                    issue = item.get("issue", "Unknown Security Issue")
-                    details = item.get("details", "")
-                    self.summary_text.insert("end", f"{idx}. [{sev}] {issue}\n")
-                    if details:
-                        self.summary_text.insert("end", f"   ↳ Details: {details}\n")
+                    self.summary_text.insert("end", f"{idx}. [{item.get('severity')}] {item.get('issue')}\n   ↳ Details: {item.get('details')}\n")
                 else:
                     self.summary_text.insert("end", f"{idx}. {item}\n")
-                self.summary_text.insert("end", "\n")
         else:
-            self.summary_text.insert("end", " ✔ No critical vulnerabilities found during basic analysis.\n\n")
+            self.summary_text.insert("end", " ✔ No vulnerabilities detected.\n")
 
-        # Section 3: Actionable Recommendations
-        self.summary_text.insert("end", "======================================================\n")
-        self.summary_text.insert("end", "💡 RECOMMENDED REMEDIATION STEPS\n")
-        self.summary_text.insert("end", "======================================================\n")
-        
+        self.summary_text.insert("end", "\n💡 RECOMMENDED ACTIONS\n")
         if recommendations:
             for rec in recommendations:
                 clean_rec = str(rec).replace("<b>", "").replace("</b>", "")
                 self.summary_text.insert("end", f" • {clean_rec}\n")
         else:
-            self.summary_text.insert("end", " • Maintain current server hardening policies.\n")
-
-        # Section 4: Key Infrastructure Snapshot
-        self.summary_text.insert("end", "\n======================================================\n")
-        self.summary_text.insert("end", "🌐 TARGET INFRASTRUCTURE SNAPSHOT\n")
-        self.summary_text.insert("end", "======================================================\n")
-        self.summary_text.insert("end", f" • Domain/Target : {scan_results.get('domain', 'N/A')}\n")
-        self.summary_text.insert("end", f" • IP Address    : {scan_results.get('ip', 'N/A')}\n")
-        self.summary_text.insert("end", f" • HTTPS Enabled : {'Yes' if scan_results.get('https_enabled') else 'No'}\n")
-        self.summary_text.insert("end", f" • Open Ports    : {scan_results.get('Open Ports', 'None detected')}\n")
-
-    def reset_dashboard(self):
-        """
-        Resets the dashboard to initial clean state
-        """
-        self.score_display.configure(text="-- / 100 (Awaiting Scan)", text_color="#89b4fa")
-        self.progress_bar.set(0)
-        self.summary_text.delete("1.0", "end")
-        self.summary_text.insert("1.0", "📌 Dashboard reset. Enter a target and start a scan.")
+            self.summary_text.insert("end", " • Maintain current configurations.\n")
