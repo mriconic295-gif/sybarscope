@@ -64,6 +64,7 @@ Start the main application GUI:
 
 Bash
 python3 main.py
+
 🪟 Option 2: Windows Setup
 Step 1: Open Command Prompt & Clone Repository
 Open Command Prompt (cmd) or PowerShell and run:
