@@ -36,7 +36,7 @@
 ### 🐧 Option 1: Linux / macOS Setup
 
 Step 1: Clone the Repository
-$ git clone [https://github.com/your-username/cyberscope.git](https://github.com/your-username/cyberscope.git)
+$ git clone https://github.com/mriconic295-gif/cyberscope.git
 $ cd cyberscope
 
 Step 2: Create a Virtual Environment (myenv)
@@ -56,7 +56,7 @@ $ python3 main.py
 ### 🪟 Option 2: Windows Setup
 
 Step 1: Open Command Prompt & Clone Repository
-> git clone [https://github.com/your-username/cyberscope.git](https://github.com/your-username/cyberscope.git)
+> git clone https://github.com/mriconic295-gif/cyberscope.git
 > cd cyberscope
 
 Step 2: Create a Virtual Environment (myenv)
