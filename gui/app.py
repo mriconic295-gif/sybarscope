@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from gui.deshboard import SecurityDashboard as Dashboard
+from gui.deshboard import Dashboard
 
 class App(ctk.CTk):
     def __init__(self, config):
