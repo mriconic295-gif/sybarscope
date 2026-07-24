@@ -1,84 +1,113 @@
-
 class AIEngine:
     def __init__(self):
         self.risk_score = 0
         self.summary = ""
         self.recommendations = []
-        self.detected_issues = []
+        self.vulnerabilities = []  # ડિટેક્ટ થયેલી બધી જ ક્ષતિઓની યાદી
 
     def analyze(self, data: dict):
         score = 0
-        self.detected_issues = []
+        self.vulnerabilities = []
 
-        # 1. HTTPS / SSL Check
-        # https_enabled ફ્લેગ અથવા SSL ડિક્શનરીમાંથી ચેક કરો
+        # ----------------------------------------------------
+        # 1. SSL / HTTPS Critical Check (સૌથી વધુ મહત્વનું)
+        # ----------------------------------------------------
         https_enabled = data.get("https_enabled", True)
         ssl_data = data.get("SSL", {})
         
         if not https_enabled:
-            score += 35
-            self.detected_issues.append("HTTPS is disabled or unavailable.")
-        
-        # Expired or Invalid Certificate Check
-        if isinstance(ssl_data, dict) and ssl_data.get("expired", False):
             score += 40
-            self.detected_issues.append("SSL Certificate has expired.")
+            self.vulnerabilities.append({
+                "severity": "CRITICAL",
+                "issue": "Missing HTTPS / Unencrypted Connection",
+                "details": "વેબસાઇટ HTTP પર ચાલે છે. ડેટા પ્લેન ટેક્સ્ટમાં ટ્રાન્સફર થાય છે."
+            })
+        
+        if isinstance(ssl_data, dict) and ssl_data.get("expired", False):
+            score += 50
+            self.vulnerabilities.append({
+                "severity": "CRITICAL",
+                "issue": "Expired SSL Certificate",
+                "details": "SSL સર્ટિફિકેટ એક્સપાયર થઈ ગયું છે, જે બ્રાઉઝર વોર્નિંગ દર્શાવે છે."
+            })
 
-        # 2. Security Headers Check (Missing count પર આધારિત)
-        missing_headers = data.get("missing_security_headers", [])
-        if isinstance(missing_headers, list) and len(missing_headers) > 0:
-            # પ્રત્યેક મિસિંગ હેડર માટે 5 પોઈન્ટ્સ (મહત્તમ 25)
-            header_penalty = min(len(missing_headers) * 5, 25)
-            score += header_penalty
-            self.detected_issues.append(f"Missing {len(missing_headers)} critical security headers.")
-
-        # 3. Open Critical Ports Check
+        # ----------------------------------------------------
+        # 2. Critical Open Ports Check (ડેટાબેઝ/સર્વર એક્સેસ)
+        # ----------------------------------------------------
         open_ports = data.get("Open Ports", [])
         dangerous_ports = [21, 22, 23, 3306, 3389, 5432]  # FTP, SSH, Telnet, DB Ports
         found_dangerous = [p for p in open_ports if p in dangerous_ports]
         
         if found_dangerous:
-            score += 25
-            self.detected_issues.append(f"Critical service ports exposed: {found_dangerous}")
+            score += 35
+            self.vulnerabilities.append({
+                "severity": "HIGH",
+                "issue": f"Exposed Critical Ports ({found_dangerous})",
+                "details": "સર્વરના મહત્વના એડમિન/ડેટાબેઝ પોર્ટ્સ પબ્લિકલી ખુલ્લા છે."
+            })
 
+        # ----------------------------------------------------
+        # 3. Security Headers Check (હવે વાજબી પેનલ્ટી સાથે)
+        # ----------------------------------------------------
+        missing_headers = data.get("missing_security_headers", [])
+        if isinstance(missing_headers, list) and len(missing_headers) > 0:
+            # હવે દરેક મિસિંગ હેડર માટે ફક્ત ૨ કે ૩ પોઈન્ટ્સ જ ઉમેરાશે (મહત્તમ ૧૨)
+            header_penalty = min(len(missing_headers) * 3, 12)
+            score += header_penalty
+            
+            # જો બહુ અગત્યના હેડર્સ મિસિંગ હોય તો જ સિક્યોરિટી એલર્ટ આપો
+            important_missing = [h for h in missing_headers if h in ["Strict-Transport-Security", "Content-Security-Policy"]]
+            if important_missing:
+                self.vulnerabilities.append({
+                    "severity": "LOW",
+                    "issue": f"Missing Hardening Headers ({', '.join(important_missing)})",
+                    "details": "XSS અથવા Clickjacking જેવી સપાટી સામે રક્ષણ આપતા હેડર્સ મિસિંગ છે."
+                })
+
+        # ----------------------------------------------------
         # 4. CDN Expose / Real Origin IP Exposure
+        # ----------------------------------------------------
         if data.get("CDN") and data.get("Potential Real Origin IP"):
-            score += 20
-            self.detected_issues.append("Origin IP exposed behind CDN/WAF.")
+            score += 15
+            self.vulnerabilities.append({
+                "severity": "MEDIUM",
+                "issue": "CDN Origin IP Bypass",
+                "details": "Cloudflare/WAF પાછળનો સાચો સર્વર IP જાહેર થઈ ગયો છે."
+            })
 
-        # 5. Weak TLS Protocol Check
+        # ----------------------------------------------------
+        # 5. Outdated TLS Protocols
+        # ----------------------------------------------------
         if data.get("weak_tls") or (isinstance(ssl_data, dict) and ssl_data.get("protocol") in ["TLSv1.0", "TLSv1.1"]):
             score += 15
-            self.detected_issues.append("Outdated/Weak TLS protocol in use.")
+            self.vulnerabilities.append({
+                "severity": "MEDIUM",
+                "issue": "Weak / Outdated TLS Protocol",
+                "details": "જુના અને સુરક્ષિત ન હોય તેવા TLS 1.0/1.1 નો ઉપયોગ થઈ રહ્યો છે."
+            })
 
-        # સ્કોરને 0 થી 100 ની વચ્ચે મર્યાદિત રાખવો
+        # સ્કોરને ૦ થી ૧૦૦ વચ્ચે રાખવો
         self.risk_score = min(max(score, 0), 100)
 
     def generate_summary(self) -> str:
-        if self.risk_score < 30:
-            return f"Low Risk ({self.risk_score}/100): Security posture is good. Minimal vulnerabilities found."
-        elif self.risk_score < 60:
-            return f"Moderate Risk ({self.risk_score}/100): Several security gaps identified that should be addressed."
+        if self.risk_score <= 15:
+            return f"Low Risk ({self.risk_score}/100): Excellent security posture. Standard enterprise level settings."
+        elif self.risk_score <= 40:
+            return f"Moderate Risk ({self.risk_score}/100): Minor missing hardening configurations, but overall safe."
+        elif self.risk_score <= 70:
+            return f"Elevated Risk ({self.risk_score}/100): Significant security gaps identified that require attention."
         else:
-            return f"High Risk ({self.risk_score}/100): Critical security issues detected! Immediate remediation required."
+            return f"High Critical Risk ({self.risk_score}/100): Dangerous open ports or invalid SSL detected!"
 
     def get_recommendations(self) -> list:
         recs = []
-
-        # ડાયગ્નોસ થયેલા ઈશ્યુઝના આધારે ચોક્કસ સલાહ આપો
-        for issue in self.detected_issues:
-            if "HTTPS" in issue or "SSL" in issue:
-                recs.append("Install and enforce a valid SSL/TLS certificate with auto-renewal.")
-            elif "security headers" in issue:
-                recs.append("Configure essential HTTP Security Headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options).")
-            elif "ports" in issue:
-                recs.append("Close unnecessary public ports or restrict access using a firewall/VPN.")
-            elif "CDN" in issue:
-                recs.append("Restrict direct access to origin IP using firewall rules (allow only CDN IPs).")
-            elif "TLS" in issue:
-                recs.append("Disable weak protocols (TLS 1.0/1.1) and enforce TLS 1.2 or TLS 1.3.")
+        for vuln in self.vulnerabilities:
+            if vuln["severity"] in ["CRITICAL", "HIGH"]:
+                recs.append(f"<b>[Fix Required]</b> {vuln['issue']}: {vuln['details']}")
+            else:
+                recs.append(f"<b>[Recommendation]</b> {vuln['issue']}")
 
         if not recs:
-            recs.append("Maintain regular updates and keep monitoring server configuration.")
-
+            recs.append("No critical vulnerabilities found. Maintain current configuration.")
+            
         return recs
