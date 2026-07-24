@@ -70,7 +70,7 @@ Step 1: Open Command Prompt & Clone Repository
 Open Command Prompt (cmd) or PowerShell and run:
 
 DOS
-git clone [https://github.com/your-username/cyberscope.git](https://github.com/your-username/cyberscope.git)
+git clone https://github.com/mriconic295-gif/sybarscope.git
 cd cyberscope
 Step 2: Create a Virtual Environment (myenv)
 DOS
