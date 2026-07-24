@@ -6,8 +6,12 @@ import logging
 # Logger Setup
 logger = logging.getLogger("CyberScope.Dashboard")
 
-class SecurityDashboard(ctk.CTkFrame):
-    def __init__(self, parent, *args, **kwargs):
+class Dashboard(ctk.CTkFrame):
+    def __init__(self, parent, config=None, *args, **kwargs):
+        # config ને કસ્ટમ આર્ગ્યુમેન્ટ તરીકે સ્ટોર કરો
+        self.config = config or {}
+        
+        # parent અને કસ્ટમ કીવર્ડ આર્ગ્યુમેન્ટ્સ જ super().__init__ માં મોકલો
         super().__init__(parent, *args, **kwargs)
         
         # Main Layout Setup
