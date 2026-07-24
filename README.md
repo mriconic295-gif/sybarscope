@@ -1,4 +1,4 @@
-# sybarscope
+# cybarscope
 # CyberScope - Cybersecurity Analysis Tool
 
 A comprehensive tool for analyzing any domain/URL for security, DNS, SSL, headers, technologies, and more.
