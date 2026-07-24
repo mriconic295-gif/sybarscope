@@ -90,9 +90,8 @@ class App(ctk.CTk):
         self.main_container.grid_columnconfigure(0, weight=1)
 
         # Dashboard View
-def build_main_container(self):
         self.dashboard = Dashboard(self.main_container, config=self.config)
-        self.dashboard.grid(row=0, column=0, sticky="nsew")  # 👈 બંને લાઈનની આગળ સરખી જ સ્પેસ હોવી જોઈએ
+        self.dashboard.grid(row=0, column=0, sticky="nsew")
 
     def change_theme(self, new_mode: str):
         """થિમ બદલવા માટેનું ફંક્શન"""
