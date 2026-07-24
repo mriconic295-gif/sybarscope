@@ -90,7 +90,7 @@ class App(ctk.CTk):
         self.main_container.grid_columnconfigure(0, weight=1)
 
         # Dashboard View
-        self.dashboard = Dashboard(self.main_container, self.config)
+self.dashboard = Dashboard(self.main_container, config=self.config)
         self.dashboard.grid(row=0, column=0, sticky="nsew")
 
     def change_theme(self, new_mode: str):
